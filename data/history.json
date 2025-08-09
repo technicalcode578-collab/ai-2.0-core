@@ -1,0 +1,47 @@
+[
+  {
+    "timestamp": "2025-08-09T18:27:05.607968",
+    "event_type": "search",
+    "payload": {
+      "query": "lofi chill beats",
+      "results": {
+        "ids": [
+          [
+            "id_0",
+            "id_1",
+            "id_2"
+          ]
+        ],
+        "embeddings": null,
+        "documents": [
+          [
+            "lofi chill beats",
+            "upbeat workout music",
+            "classical piano"
+          ]
+        ],
+        "uris": null,
+        "included": [
+          "metadatas",
+          "documents",
+          "distances"
+        ],
+        "data": null,
+        "metadatas": [
+          [
+            null,
+            null,
+            null
+          ]
+        ],
+        "distances": [
+          [
+            2.3330640262601843e-13,
+            1.0678865909576416,
+            1.727360486984253
+          ]
+        ]
+      }
+    }
+  }
+]

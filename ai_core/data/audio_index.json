@@ -1,0 +1,20 @@
+[
+  {
+    "file_name": "sample2.wav",
+    "path": "/workspaces/ai-2.0-core/ai_core/data/audio/sample2.wav",
+    "metadata": {
+      "title": "sample2",
+      "format": "wav",
+      "size_bytes": 6928
+    }
+  },
+  {
+    "file_name": "sample1.wav",
+    "path": "/workspaces/ai-2.0-core/ai_core/data/audio/sample1.wav",
+    "metadata": {
+      "title": "sample1",
+      "format": "wav",
+      "size_bytes": 6949
+    }
+  }
+]
