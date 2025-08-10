@@ -1,16 +1,22 @@
-torch>=2.0.0
-torchaudio>=2.0.0
-transformers>=4.40.0
-timm>=1.0.3
-chromadb>=0.5.5
-openai-whisper
-pydub
-librosa
-audioread
-soundfile
-numpy
-pandas
+# Numpy version compatible with our AI libraries
+numpy==1.26.4
+
+# Stable PyTorch Stack for CUDA 12.1
+torch==2.1.2
+torchvision==0.16.2
+torchaudio==2.1.2
+
+# Hugging Face Transformers for the modern CLAP model
+transformers>=4.28.0
+
+# The missing library for our embeddings.py file
+sentence-transformers
+
+# Vector DB and other utilities
+chromadb
+librosa>=0.9.2
+tqdm
+
+# FastAPI for the server
 fastapi
-uvicorn
-python-dotenv
-scipy
+uvicorn[standard]

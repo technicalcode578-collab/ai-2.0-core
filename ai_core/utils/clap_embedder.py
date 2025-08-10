@@ -1,35 +1,45 @@
-# ai_core/utils/clap_embedder.py
 import torch
-import torchaudio
-import laion_clap
 import numpy as np
+from transformers import ClapModel, ClapProcessor
+import librosa
+import warnings
+
+# Suppress warnings for a cleaner log
+warnings.filterwarnings("ignore")
 
 class CLAPEmbedder:
-    def __init__(self, device: str | None = None):
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"[CLAPEmbedder] device={self.device}")
-        self.model = laion_clap.CLAP_Module(enable_fusion=False)
-        self.model.load_ckpt()  # downloads if needed
-        self.model = self.model.to(self.device)
+    """
+    A modern wrapper class for the Microsoft CLAP model using the Transformers library.
+    """
+    def __init__(self, model_name="microsoft/clap-htsat-unfused", device="cpu"):
+        """
+        Initializes the CLAP model from Hugging Face.
+        Note: We default to 'cpu' as the Codespace may not have a GPU.
+        The Docker container will run this on the CPU.
+        """
+        print(f"Loading Microsoft CLAP model '{model_name}' onto device '{device}'...")
+        self.device = device
+        self.model = ClapModel.from_pretrained(model_name).to(self.device)
+        self.processor = ClapProcessor.from_pretrained(model_name)
+        print("Microsoft CLAP model loaded successfully.")
 
-    def _load_audio(self, path, target_sr=48000):
-        audio, sr = torchaudio.load(path)  # returns Tensor [channels, samples]
-        if sr != target_sr:
-            audio = torchaudio.functional.resample(audio, sr, target_sr)
-        # convert to mono
-        if audio.shape[0] > 1:
-            audio = audio.mean(dim=0, keepdim=True)
-        return audio
-
-    def embed_audio_path(self, path):
-        audio = self._load_audio(path)  # Tensor [1, N]
-        # model expects batch dimension
-        # laion_clap API: get_audio_embedding_from_data(tensor, use_tensor=True)
-        emb = self.model.get_audio_embedding_from_data(audio.to(self.device), use_tensor=True)
-        emb_np = emb.detach().cpu().numpy().squeeze()
-        # ensure 1D numpy vector
-        return emb_np
-
-    def embed_texts(self, texts: list[str]):
-        emb = self.model.get_text_embedding(texts, use_tensor=True)
-        return emb.detach().cpu().numpy()
+    def get_audio_embedding_from_file(self, file_path: str) -> np.ndarray:
+        """
+        Computes the audio embedding for a single audio file.
+        """
+        try:
+            # Load and resample audio to the required 48000Hz
+            audio_array, sr = librosa.load(file_path, sr=48000, mono=True)
+            
+            # Process the audio array
+            inputs = self.processor(audios=audio_array, sampling_rate=48000, return_tensors="pt").to(self.device)
+            
+            # Get the embedding
+            with torch.no_grad():
+                embedding = self.model.get_audio_features(**inputs)
+            
+            # Return as a CPU numpy array
+            return embedding.cpu().numpy()[0]
+        except Exception as e:
+            print(f"Error processing file {file_path}: {e}")
+            return None
