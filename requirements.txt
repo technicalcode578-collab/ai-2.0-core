@@ -1,0 +1,16 @@
+torch>=2.0.0
+torchaudio>=2.0.0
+transformers>=4.40.0
+timm>=1.0.3
+chromadb>=0.5.5
+openai-whisper
+pydub
+librosa
+audioread
+soundfile
+numpy
+pandas
+fastapi
+uvicorn
+python-dotenv
+scipy
