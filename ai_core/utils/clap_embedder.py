@@ -1,45 +1,36 @@
 import torch
+from PIL import Image
 import numpy as np
-from transformers import ClapModel, ClapProcessor
-import librosa
 import warnings
+from sentence_transformers import SentenceTransformer
+import librosa
 
-# Suppress warnings for a cleaner log
+# Suppress warnings for a clean output
 warnings.filterwarnings("ignore")
 
 class CLAPEmbedder:
     """
-    A modern wrapper class for the Microsoft CLAP model using the Transformers library.
+    The final, stable embedder using a public CLIP model from sentence-transformers.
+    It works by treating audio spectrograms as images.
     """
-    def __init__(self, model_name="microsoft/clap-htsat-unfused", device="cpu"):
-        """
-        Initializes the CLAP model from Hugging Face.
-        Note: We default to 'cpu' as the Codespace may not have a GPU.
-        The Docker container will run this on the CPU.
-        """
-        print(f"Loading Microsoft CLAP model '{model_name}' onto device '{device}'...")
+    def __init__(self, device="cpu"):
+        print(f"Loading public CLIP model onto device '{device}'...")
         self.device = device
-        self.model = ClapModel.from_pretrained(model_name).to(self.device)
-        self.processor = ClapProcessor.from_pretrained(model_name)
-        print("Microsoft CLAP model loaded successfully.")
+        # Load a standard, public, non-gated CLIP model
+        self.model = SentenceTransformer('clip-ViT-L-14', device=self.device)
+        print("CLIP model loaded successfully.")
 
     def get_audio_embedding_from_file(self, file_path: str) -> np.ndarray:
-        """
-        Computes the audio embedding for a single audio file.
-        """
         try:
-            # Load and resample audio to the required 48000Hz
-            audio_array, sr = librosa.load(file_path, sr=48000, mono=True)
-            
-            # Process the audio array
-            inputs = self.processor(audios=audio_array, sampling_rate=48000, return_tensors="pt").to(self.device)
-            
-            # Get the embedding
-            with torch.no_grad():
-                embedding = self.model.get_audio_features(**inputs)
-            
-            # Return as a CPU numpy array
-            return embedding.cpu().numpy()[0]
+            y, sr = librosa.load(file_path, sr=22050, mono=True)
+            mel_spectrogram = librosa.feature.melspectrogram(y=y, sr=sr)
+            log_mel_spectrogram = librosa.power_to_db(mel_spectrogram, ref=np.max)
+            normalized_spectrogram = (log_mel_spectrogram - log_mel_spectrogram.min()) / (log_mel_spectrogram.max() - log_mel_spectrogram.min())
+            spectrogram_rgb = np.stack([normalized_spectrogram]*3, axis=-1)
+            image = Image.fromarray((spectrogram_rgb * 255).astype(np.uint8))
+            # Get the embedding using the model's powerful image encoder
+            embedding = self.model.encode(image, batch_size=1, convert_to_numpy=True, show_progress_bar=False)
+            return embedding
         except Exception as e:
             print(f"Error processing file {file_path}: {e}")
             return None
