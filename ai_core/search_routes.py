@@ -1,42 +1,64 @@
-# ai_core/search_routes.py
-from fastapi import APIRouter, File, UploadFile, HTTPException, Query
-from typing import List
-from pathlib import Path
-import numpy as np
-import uvicorn
+from fastapi import APIRouter, HTTPException
+import chromadb
+import torch
+import os
 
+# --- This is the key fix ---
+# We now import our custom class directly and create an instance of it.
 from ai_core.utils.clap_embedder import CLAPEmbedder
 
-# Import your chroma collection (reuse)
-from ai_core import embeddings as embeddings_mod
-collection = getattr(embeddings_mod, "collection", None)
-if collection is None:
-    raise RuntimeError("Chroma collection not found in ai_core.embeddings")
+# --- Configuration ---
+VECTOR_DB_PATH = "/app/data/vector_db"
+CHROMA_COLLECTION = "acytel_music_v2_clip"
 
+# --- Initialize Router, Database, and Embedder ---
 router = APIRouter()
+embedder = CLAPEmbedder(device="cpu") # Initialize our custom embedder on the CPU
 
-embedder = CLAPEmbedder()
+try:
+    client = chromadb.PersistentClient(path=VECTOR_DB_PATH)
+    collection = client.get_collection(name=CHROMA_COLLECTION)
+    print("✅ Search API: Successfully connected to ChromaDB collection.")
+except Exception as e:
+    print(f"❌ Search API: Failed to connect to ChromaDB. Will not be available. Error: {e}")
+    collection = None
 
-@router.post("/search/audio")
-async def search_by_audio(file: UploadFile = File(...), n_results: int = Query(5, ge=1, le=50)):
-    # save uploaded file temporarily
-    tmp_dir = Path("/tmp/ai_core_uploads")
-    tmp_dir.mkdir(parents=True, exist_ok=True)
-    tmp_path = tmp_dir / file.filename
-    with open(tmp_path, "wb") as f:
-        f.write(await file.read())
+# --- API Endpoint Definition ---
+@router.post("/search/text")
+def search_by_text_description(query_text: str, top_k: int = 5):
+    """
+    Finds the most similar tracks to a given text description.
+    """
+    if collection is None:
+        raise HTTPException(status_code=503, detail="Database connection is not available.")
 
     try:
-        qvec = embedder.embed_audio_path(str(tmp_path)).tolist()
+        # 1. Convert the text query into an AI embedding using our class method
+        query_vector = embedder.get_text_embedding(query_text)
+        
+        # 2. Query the database
+        results = collection.query(
+            query_embeddings=[query_vector.tolist()],
+            n_results=top_k,
+            include=["metadatas", "distances"]
+        )
+        
+        # 3. Format and return the results
+        similar_tracks = []
+        if results and results['ids'] and results['ids'][0]:
+            for i, (item_id, distance, metadata) in enumerate(zip(results['ids'][0], results['distances'][0], results['metadatas'][0])):
+                similar_tracks.append({
+                    "rank": i + 1,
+                    "id": item_id,
+                    "distance": f"{distance:.4f}",
+                    "metadata": metadata
+                })
+        
+        return {
+            "query_text": query_text,
+            "results_found": len(similar_tracks),
+            "similar_tracks": similar_tracks
+        }
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"embedding error: {e}")
-
-    res = collection.query(query_embeddings=[qvec], n_results=n_results)
-    return {"query_file": file.filename, "results": res}
-
-@router.get("/search/text")
-def search_by_text(q: str = Query(...), n_results: int = Query(5, ge=1, le=50)):
-    # use CLAP text embedding
-    tvec = embedder.embed_texts([q])[0].tolist()
-    res = collection.query(query_embeddings=[tvec], n_results=n_results)
-    return {"query": q, "results": res}
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")

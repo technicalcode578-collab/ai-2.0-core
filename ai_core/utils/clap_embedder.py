@@ -34,3 +34,12 @@ class CLAPEmbedder:
         except Exception as e:
             print(f"Error processing file {file_path}: {e}")
             return None
+    def get_text_embedding(self, text: str) -> np.ndarray:
+        """Encodes a text string into an embedding vector."""
+        try:
+            # The same SentenceTransformer model can encode text directly
+            embedding = self.model.encode(text, convert_to_numpy=True, show_progress_bar=False)
+            return embedding
+        except Exception as e:
+            print(f"Error encoding text '{text}': {e}")
+            return None
