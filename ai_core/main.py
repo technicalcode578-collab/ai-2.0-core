@@ -1,20 +1,22 @@
 from fastapi import FastAPI
-from ai_core import embeddings, history_routes
-from ai_core.history_db import init_db
-from ai_core import search_routes
+from .database import models
+# The leading dots correctly import from within the 'ai_core' package
+from .api import ingestion, search_routes, personalization
 
-app = FastAPI(title="AI 2.0 Core API")
+# This creates the database tables on startup
+models.create_db_and_tables()
 
-# Include routers
-app.include_router(embeddings.router)
-app.include_router(history_routes.router)
-app.include_router(search_routes.router)
+app = FastAPI(
+    title="Acytel Music AI",
+    description="The core intelligence engine for music personalization.",
+    version="2.0.0"
+)
 
-# Startup event to initialize database
-@app.on_event("startup")
-def startup_event():
-    init_db()  # Synchronous init
+# These lines make all your APIs live with a /api/v1 prefix
+app.include_router(ingestion.router, prefix="/api/v1", tags=["Ingestion"])
+app.include_router(search_routes.router, prefix="/api/v1", tags=["Search"])
+app.include_router(personalization.router, prefix="/api/v1", tags=["Personalization"])
 
 @app.get("/")
-async def root():
-    return {"status": "AI Core is running 🚀"}
+def read_root():
+    return {"status": "Acytel Music AI is running."}
