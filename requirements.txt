@@ -1,22 +1,27 @@
-# Numpy version compatible with our AI libraries
-numpy==1.26.4
+# Core Web Framework
+fastapi
+uvicorn
 
-# Stable PyTorch Stack for CUDA 12.1
-torch==2.1.2
-torchvision==0.16.2
-torchaudio==2.1.2
+# Database ORM and Tooling
+sqlalchemy
+alembic
 
-# Hugging Face Transformers for the modern CLAP model
-transformers>=4.28.0
+# Data Validation and Configuration
+pydantic
+python-decouple
 
-# The missing library for our embeddings.py file
-sentence-transformers
-
-# Vector DB and other utilities
+# AI & Vector DB Dependencies
 chromadb
+sentence-transformers
 librosa>=0.9.2
 tqdm
 
-# FastAPI for the server
-fastapi
-uvicorn[standard]
+# Core ML Libraries (needed by sentence-transformers)
+torch
+torchvision
+torchaudio
+scikit-learn
+lyricsgenius
+sentencepiece
+scikit-learn
+musicbrainzngs
