@@ -25,3 +25,4 @@ lyricsgenius
 sentencepiece
 scikit-learn
 musicbrainzngs
+demucs
